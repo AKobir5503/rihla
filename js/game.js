@@ -35,6 +35,7 @@ $("#nav-board").onclick = () => leaderboardView();
 
 // ---------------- home ----------------
 async function home() {
+  dock(false);
   stopTimer();
   scene.reset(); $("#arrive").classList.remove("show");
   if (!S.game) {
@@ -59,6 +60,9 @@ async function home() {
   $("#start").onclick = () => (S.user ? start() : auth.open(true));
 }
 
+// During a question the panel docks to the bottom of the screen so the map stays visible.
+function dock(on) { document.body.classList.toggle("docked", on); if (!on) window.scrollTo(0, 0); }
+
 // ---------------- play ----------------
 function start() {
   S.i = 0; S.results = []; S.score = 0;
@@ -70,8 +74,9 @@ function ask() {
   const q = S.game.questions[S.i];
   const secs = Number(S.game.timer_seconds) || DEFAULT_TIMER_SECONDS;
   S.tries = []; S.timeUp = false;
+  dock(true);
   app.innerHTML = `
-    <div class="qhead"><span class="eyebrow">Question ${S.i + 1} of ${S.game.questions.length}</span><span class="score">${S.score} pts</span></div>
+    <div class="qhead"><span class="eyebrow">Question ${S.i + 1} of ${S.game.questions.length}</span><span class="qmeta"><span class="score">${S.score} pts</span> · <span id="time-left">${secs}s</span></span></div>
     <div class="timer"><div class="timer-fill" id="timer-fill"></div></div>
     <h2 class="prompt">${esc(q.prompt)}</h2>
     <form id="answer-form" autocomplete="off">
@@ -80,8 +85,7 @@ function ask() {
       </div>
       <button class="primary" id="submit">Submit</button>
     </form>
-    <p class="tries" id="tries" aria-live="polite"></p>
-    <p class="muted small" id="time-left">${secs}s</p>`;
+    <p class="tries" id="tries" aria-live="polite"></p>`;
   const input = $("#answer");
   $("#answer-form").onsubmit = (e) => { e.preventDefault(); submit(input.value); };
   input.focus();
@@ -156,11 +160,12 @@ function wrong(text, repeat = false) {
 
 function flash(rank, pts, text, matched, timedOut) {
   const last = S.i === S.game.questions.length - 1;
+  dock(true);
   app.innerHTML = `
     <div class="flash rank-${rank}">
-      <div class="flash-rank">${esc(RANKS[rank].label)}</div>
-      <div class="flash-pts">+${pts}<small> pts · ${fmtKm(pts)}</small></div>
-      <p class="muted">${!text ? (timedOut ? "Time's up. No valid answer this time." : "No answer.") : matched && matched.text.toLowerCase() !== text.toLowerCase() ? `Counted as <b>${esc(matched.text)}</b>` : `“${esc(text)}”`}</p>
+      <div class="flash-top"><div class="flash-rank">${esc(RANKS[rank].label)}</div>
+      <div class="flash-pts">+${pts}<small> pts · ${fmtKm(pts)}</small></div></div>
+      <p class="flash-note">${!text ? (timedOut ? "Time's up. No valid answer this time." : "No answer.") : matched && matched.text.toLowerCase() !== text.toLowerCase() ? `Counted as <b>${esc(matched.text)}</b>` : `“${esc(text)}”`}</p>
       <button class="primary" id="next">${last ? "See where you landed" : "Next question"}</button>
     </div>`;
   const go = () => { S.i++; last ? finish() : ask(); };
@@ -168,6 +173,7 @@ function flash(rank, pts, text, matched, timedOut) {
 }
 
 async function finish() {
+  dock(false);
   const special = isSpecialRun(S.results.map((r) => r.rank));
   const stop = stopFor(S.score, maxScore(), special);
   let saved = null, saveErr = "";
@@ -207,6 +213,7 @@ function reveal(q, mine) {
 
 // ---------------- leaderboard ----------------
 async function leaderboardView() {
+  dock(false);
   stopTimer();
   if (!S.game) await home();
   if (!S.game) return;
@@ -226,6 +233,7 @@ async function leaderboardView() {
 
 // ---------------- account ----------------
 function accountView() {
+  dock(false);
   stopTimer();
   app.innerHTML = `
     <h1>Your account</h1>

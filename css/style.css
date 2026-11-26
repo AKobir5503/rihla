@@ -205,3 +205,25 @@ body.play:has(#demo-banner:not(.hidden)) .hud { top: 104px; }
   .play .topbar nav .link { font-size: .8rem; padding: .35rem .4rem; white-space: nowrap; }
   .play .banner { top: 52px; font-size: .68rem; }
 }
+
+/* ---------- docked question panel (bottom of screen) ---------- */
+.docked main#app { position: fixed; left: 50%; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(640px, calc(100vw - 24px)); margin: 0; padding: .75rem .9rem .8rem; border-radius: 14px; background: rgba(16, 20, 28, .5); border: 1px solid rgba(255, 255, 255, .14); color: #fff; box-shadow: 0 6px 24px rgba(0, 0, 0, .25); }
+.docked #app .eyebrow { color: #9fe3c8; font-size: .68rem; }
+.docked #app .qmeta { font-size: .8rem; color: rgba(255, 255, 255, .85); font-variant-numeric: tabular-nums; }
+.docked #app .score { font-weight: 700; }
+.docked #app .timer { height: 4px; margin: .4rem 0 .55rem; background: rgba(255, 255, 255, .2); }
+.docked #app .prompt { font-size: 1.05rem; margin: 0 0 .55rem; color: #fff; }
+.docked #app .combo input { font-size: 1rem; padding: .55rem .75rem; background: rgba(255, 255, 255, .92); color: #141821; border-color: transparent; }
+.docked #app #answer-form button { padding: .55rem .95rem; }
+.docked #app .tries { color: rgba(255, 255, 255, .8); font-size: .8rem; margin-top: .3rem; min-height: 0; }
+.docked #app .tries:empty { display: none; }
+.docked #app .tries s { text-decoration-color: #ff8a8a; }
+.docked #app .nope-msg { color: #ffb0b0; }
+.docked #app .flash { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .4rem .8rem; padding: 0; text-align: left; }
+.docked #app .flash-top { display: flex; align-items: center; gap: .6rem; }
+.docked #app .flash-rank { font-size: .75rem; padding: .45rem .7rem; }
+.docked #app .flash-pts { font-size: 1.4rem; margin: 0; color: #fff; }
+.docked #app .flash-pts small { color: rgba(255, 255, 255, .75); font-size: .8rem; }
+.docked #app .flash-note { margin: 0; font-size: .85rem; color: rgba(255, 255, 255, .85); flex: 1 1 100%; order: 3; }
+.docked #app .flash .primary { padding: .5rem .9rem; }
+.docked #app .flash .primary { order: 4; }
