@@ -16,7 +16,12 @@ function showNext() {
   $("#hud-next").textContent = !n ? "" : n.locked ? `Ahead: ${n.stop.name}. The gate opens only when every answer is a Hidden Gem or better.` : `Next: ${n.stop.name} · ${n.km.toLocaleString()} km`;
 }
 let arriveTimer = 0;
+// Phone vibration where the browser supports it (Android Chrome; iPhones ignore it).
+function buzz(pattern) { try { if (!matchMedia("(prefers-reduced-motion: reduce)").matches) navigator.vibrate?.(pattern); } catch {} }
+const BUZZ = { noor: [20, 40, 20, 40, 70], hidden_gem: [20, 40, 50], scholar: [35], pathfinder: [25], traveler: [20], footstep: [15], lost: [60] };
+
 function arrive(stop) {
+  scene.celebrate(); buzz([12, 30, 12]);
   const el = $("#arrive");
   el.innerHTML = `<small>${stop.special ? "The gate opens" : "Arrived"}</small>${esc(stop.name)}${stop.place && !stop.special ? `<small>${esc(stop.place)}</small>` : ""}`;
   el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
@@ -100,6 +105,7 @@ function startTimer(secs, onEnd) {
     const left = Math.max(0, S.deadline - Date.now());
     if (fill) fill.style.width = (left / (secs * 1000)) * 100 + "%";
     if (fill) fill.classList.toggle("low", left < 5000);
+    const sec = Math.ceil(left / 1000); if (sec !== S.lastSec) { if (sec > 0 && sec <= 3) buzz(10); S.lastSec = sec; }
     if (label) label.textContent = Math.ceil(left / 1000) + "s";
     if (left <= 0) { stopTimer(); onEnd(); }
   };
@@ -134,6 +140,7 @@ async function submit(raw, timedOut = false) {
   if (rank === "lost" && !S.timeUp) return wrong(text);
   if (rank === "lost" && S.timeUp && S.results.length > S.i) return; // already finalized
   stopTimer();
+  scene.cheer(rank); buzz(BUZZ[rank] || [20]);
   const pts = RANKS[rank]?.points ?? 0;
   S.score += pts;
   S.results.push({ question_id: q.id, input: rank === "lost" ? "" : text, matched: matched ? matched.text : null, rank, points: pts, tries: S.tries.slice(), timed_out: rank === "lost" });
@@ -152,7 +159,7 @@ async function submit(raw, timedOut = false) {
 
 function wrong(text, repeat = false) {
   if (!repeat) S.tries.push(text);
-  scene.shake();
+  scene.shake(); buzz([30, 40, 30]);
   const input = $("#answer"), box = $("#tries");
   if (input) { input.value = ""; input.classList.remove("nope"); void input.offsetWidth; input.classList.add("nope"); input.focus(); }
   if (box) box.innerHTML = `<span class="nope-msg">${repeat ? "Already tried that." : "Not a valid answer. Keep going!"}</span> ${S.tries.map((t) => `<s>${esc(t)}</s>`).join(" ")}`;
@@ -170,6 +177,15 @@ function flash(rank, pts, text, matched, timedOut) {
     </div>`;
   const go = () => { S.i++; last ? finish() : ask(); };
   $("#next").onclick = go;
+  countUp($(".flash-pts"), pts);
+}
+
+// Points tick up from 0 instead of appearing all at once.
+function countUp(el, to) {
+  if (!el || !to || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const node = el.firstChild, t0 = performance.now(), dur = 650;
+  const tick = (now) => { const p = Math.min(1, (now - t0) / dur); node.textContent = "+" + Math.round(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
 }
 
 async function finish() {
