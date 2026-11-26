@@ -1,8 +1,8 @@
 # Rihla
 
-GT MSA's trivia journey game. Each question has many right answers; rarer answers score more and carry you farther along a horizontal route (GT Reflection Room → Al Farooq → … → al-Aqsa). Answer every question with a Hidden Gem or better and you reach the special final stop. The top answer to each question, the **Noor** answer, comes from the MSA newsletter.
+GT MSA's trivia journey game. Each question has many right answers; rarer answers score more. Every point is 10 km of travel: a pixel-art camel walks (and sails) a side-scrolling world from the GT Reflection Room past Al Farooq, DC, Istanbul, Cairo, Damascus and al-Aqsa, with the scenery changing by region. Answer every question with a Hidden Gem or better and the final gate opens to Madinah & Makkah. The top answer to each question, the **Noor** answer, comes from the MSA newsletter.
 
-- **Play page** (`index.html`): timer per question, autocomplete, instant ranks, full answer reveal after you finish, replays allowed.
+- **Play page** (`index.html`): timer per question, silent autocorrect (typos snap to the closest answer), instant ranks, travel animation with arrivals at each landmark, full answer reveal after you finish, replays allowed.
 - **Leaderboard**: each player's *first* score, plus how many times they've played.
 - **Dashboard** (`admin.html`): anyone with dashboard access can create games, write questions, build answer lists, and have Claude suggest answers.
 - **AI judging**: answers are matched instantly against the list (typos and spellings included). Only answers that aren't on the list go to Claude, and every new correct answer Claude finds is saved to the list, so the next person who types it gets an instant match.
@@ -41,7 +41,7 @@ Costs: GitHub Pages and Supabase's free plan are $0. Claude is the only cost: at
 Same SQL as step 5 with their email. Remove access with `is_admin = false`.
 
 ## Making a game
-Dashboard → New game → add questions. For each question, either type answers, paste a list (`answer | rank | spelling1, spelling2`), or press **Suggest answers with AI**, then fix ranks and mark one answer **Noor** (from the newsletter). Add a few **Lost** answers (common wrong guesses) so autocomplete doesn't give the right ones away. Tick **Published** and set the date. Players always get the newest published game dated today or earlier; share a specific one with `?game=ID` (use the Preview link).
+Dashboard → New game → add questions. For each question, either type answers, paste a list (`answer | rank | spelling1, spelling2`), or press **Suggest answers with AI**, then fix ranks and mark one answer **Noor** (from the newsletter). Add a few **Lost** answers (common wrong guesses) so they're recognized instantly. Tick **Published** and set the date. Players always get the newest published game dated today or earlier; share a specific one with `?game=ID` (use the Preview link).
 
 Answers Claude adds during play are flagged `added_by_ai` in the `answers` table if you want to review them.
 
@@ -51,7 +51,8 @@ index.html, admin.html    pages
 css/style.css             look and feel (light + dark)
 js/config.js              ranks, points, routes, Supabase keys  ← edit this
 js/game.js, js/admin.js   play page and dashboard
-js/match.js               instant typo-tolerant matching + autocomplete
+js/match.js               instant typo-tolerant matching (autocorrect)
+js/scene.js               the pixel-art travel scene (camel, zones, landmarks)
 js/data.js                demo backend (browser) and live backend (Supabase)
 js/sample.js              sample questions for demo mode
 supabase/schema.sql       tables + security rules

@@ -1,12 +1,27 @@
 // The player-facing game.
 import { api, DEMO } from "./data.js";
-import { RANKS, RANK_ORDER, DEFAULT_TIMER_SECONDS } from "./config.js";
-import { matchAnswer, suggest } from "./match.js";
-import { $, esc, rankChip, drawTrack, moveTraveler, stopFor, isSpecialRun, setupAuth, ROUTE } from "./ui.js";
+import { RANKS, RANK_ORDER, DEFAULT_TIMER_SECONDS, KM_PER_POINT } from "./config.js";
+import { matchAnswer } from "./match.js";
+import { $, esc, rankChip, stopFor, isSpecialRun, setupAuth } from "./ui.js";
+import { createScene, drawMascot } from "./scene.js";
 
 const app = $("#app");
 const S = { user: null, game: null, i: 0, results: [], score: 0, timer: null, deadline: 0, busy: false };
 const maxScore = () => (S.game ? S.game.questions.length * RANKS.noor.points : 1);
+const scene = createScene($("#scene"), { km: $("#hud-km"), zone: $("#hud-zone") });
+const fmtKm = (pts) => (pts * KM_PER_POINT).toLocaleString() + " km";
+
+function showNext() {
+  const n = scene.nextStop();
+  $("#hud-next").textContent = !n ? "" : n.locked ? `Ahead: ${n.stop.name}. The gate opens only when every answer is a Hidden Gem or better.` : `Next: ${n.stop.name} · ${n.km.toLocaleString()} km`;
+}
+let arriveTimer = 0;
+function arrive(stop) {
+  const el = $("#arrive");
+  el.innerHTML = `<small>${stop.special ? "The gate opens" : "Arrived"}</small>${esc(stop.name)}${stop.place && !stop.special ? `<small>${esc(stop.place)}</small>` : ""}`;
+  el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
+  clearTimeout(arriveTimer); arriveTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
 
 const auth = setupAuth((u) => { S.user = u; refreshNav(); home(); });
 
@@ -21,12 +36,13 @@ $("#nav-board").onclick = () => leaderboardView();
 // ---------------- home ----------------
 async function home() {
   stopTimer();
-  moveTraveler(0, 1, false);
+  scene.reset(); $("#arrive").classList.remove("show");
   if (!S.game) {
     app.innerHTML = `<p class="muted">Loading today's journey…</p>`;
     const id = new URLSearchParams(location.search).get("game");
     try { S.game = await api.getCurrentGame(id); } catch (e) { app.innerHTML = `<p class="error">${esc(e.message)}</p>`; return; }
   }
+  if (S.game) { scene.setMax(maxScore()); showNext(); }
   if (!S.game || !S.game.questions.length) {
     app.innerHTML = `<h1>No journey today</h1><p class="muted">Check back soon. New questions drop with the MSA newsletter.</p>`;
     return;
@@ -36,7 +52,7 @@ async function home() {
   app.innerHTML = `
     <p class="eyebrow">${esc(S.game.title)}</p>
     <h1>Rarer answers take you farther.</h1>
-    <p>${S.game.questions.length} questions, ${esc(S.game.timer_seconds || DEFAULT_TIMER_SECONDS)} seconds each, one answer per question. Common answers move you a step; rare ones carry you across the world. The <b>Noor</b> answer to each question is hiding in the latest GT MSA newsletter.</p>
+    <p>${S.game.questions.length} questions, ${esc(S.game.timer_seconds || DEFAULT_TIMER_SECONDS)} seconds each. Every point is ${KM_PER_POINT} km of travel: common answers move your camel a few steps, rare ones carry it across oceans. Answer every question with a Hidden Gem or better and the final gate opens. The <b>Noor</b> answer to each question is hiding in the latest GT MSA newsletter.</p>
     <ul class="ranks">${RANK_ORDER.map((r) => `<li>${rankChip(r)} <span class="muted">${RANKS[r].points} pts · ${esc(RANKS[r].blurb)}</span></li>`).join("")}</ul>
     ${first ? `<p class="note">Your first run scored <b>${first.score}</b>. That's the score on the leaderboard. You've played ${past.length} time${past.length > 1 ? "s" : ""}; replays are just for fun.</p>` : ""}
     <div class="row"><button class="primary big" id="start">${first ? "Play again" : "Start the journey"}</button></div>`;
@@ -46,7 +62,7 @@ async function home() {
 // ---------------- play ----------------
 function start() {
   S.i = 0; S.results = []; S.score = 0;
-  moveTraveler(0, maxScore(), false);
+  scene.reset(); scene.setMax(maxScore()); showNext();
   ask();
 }
 
@@ -59,28 +75,12 @@ function ask() {
     <h2 class="prompt">${esc(q.prompt)}</h2>
     <form id="answer-form" autocomplete="off">
       <div class="combo">
-        <input id="answer" maxlength="80" placeholder="Type your answer" aria-label="Your answer" role="combobox" aria-expanded="false" aria-controls="sugs" />
-        <ul id="sugs" class="sugs" role="listbox"></ul>
+        <input id="answer" maxlength="80" placeholder="Type your answer" aria-label="Your answer" autocapitalize="off" spellcheck="false" />
       </div>
       <button class="primary" id="submit">Submit</button>
     </form>
     <p class="muted small" id="time-left">${secs}s</p>`;
-  const input = $("#answer"), list = $("#sugs");
-  let active = -1;
-  const render = () => {
-    const items = suggest(input.value, q.answers);
-    list.innerHTML = items.map((t, k) => `<li role="option" class="${k === active ? "active" : ""}" data-t="${esc(t)}">${esc(t)}</li>`).join("");
-    input.setAttribute("aria-expanded", items.length ? "true" : "false");
-  };
-  input.oninput = () => { active = -1; render(); };
-  input.onkeydown = (e) => {
-    const n = list.children.length;
-    if (e.key === "ArrowDown" && n) { active = (active + 1) % n; render(); e.preventDefault(); }
-    else if (e.key === "ArrowUp" && n) { active = (active - 1 + n) % n; render(); e.preventDefault(); }
-    else if (e.key === "Enter" && active >= 0 && n) { input.value = list.children[active].dataset.t; active = -1; list.innerHTML = ""; e.preventDefault(); }
-    else if (e.key === "Escape") { list.innerHTML = ""; }
-  };
-  list.onmousedown = (e) => { const li = e.target.closest("li"); if (li) { input.value = li.dataset.t; list.innerHTML = ""; e.preventDefault(); input.focus(); } };
+  const input = $("#answer");
   $("#answer-form").onsubmit = (e) => { e.preventDefault(); submit(input.value); };
   input.focus();
   startTimer(secs, () => submit(input.value, true));
@@ -121,8 +121,15 @@ async function submit(raw, timedOut = false) {
   const pts = RANKS[rank]?.points ?? 0;
   S.score += pts;
   S.results.push({ question_id: q.id, input: text, matched: matched ? matched.text : null, rank, points: pts, timed_out: timedOut && !text });
-  moveTraveler(S.score, maxScore(), false);
   flash(rank, pts, text, matched, timedOut);
+  const nextBtn = $("#next");
+  nextBtn.disabled = true;
+  const last = S.i === S.game.questions.length - 1;
+  // On the last answer of an all-Hidden-Gem run, the camel goes through the gate.
+  const special = last && isSpecialRun(S.results.map((r) => r.rank));
+  await scene.travelTo(S.score, special, arrive);
+  showNext();
+  nextBtn.disabled = false; nextBtn.focus();
   S.busy = false;
 }
 
@@ -131,18 +138,16 @@ function flash(rank, pts, text, matched, timedOut) {
   app.innerHTML = `
     <div class="flash rank-${rank}">
       <div class="flash-rank">${esc(RANKS[rank].label)}</div>
-      <div class="flash-pts">+${pts}</div>
+      <div class="flash-pts">+${pts}<small> pts · ${fmtKm(pts)}</small></div>
       <p class="muted">${!text ? (timedOut ? "Time's up." : "No answer.") : matched && matched.text.toLowerCase() !== text.toLowerCase() ? `Counted as <b>${esc(matched.text)}</b>` : `“${esc(text)}”`}</p>
       <button class="primary" id="next">${last ? "See where you landed" : "Next question"}</button>
     </div>`;
   const go = () => { S.i++; last ? finish() : ask(); };
   $("#next").onclick = go;
-  $("#next").focus();
 }
 
 async function finish() {
   const special = isSpecialRun(S.results.map((r) => r.rank));
-  moveTraveler(S.score, maxScore(), special);
   const stop = stopFor(S.score, maxScore(), special);
   let saved = null, saveErr = "";
   try { saved = await api.saveAttempt(S.game, S.user, S.results, S.score); } catch (e) { saveErr = e.message; }
@@ -150,7 +155,8 @@ async function finish() {
     <div class="end ${special ? "special" : ""}">
       <p class="eyebrow">Journey complete</p>
       <h1>You reached ${esc(stop.name)}</h1>
-      <p class="big-score">${S.score} <span class="muted">/ ${maxScore()} pts</span></p>
+      <p class="big-score">${fmtKm(S.score)}</p>
+      <p class="muted">${S.score} / ${maxScore()} pts</p>
       ${special ? `<p>Every answer was a Hidden Gem or better. MashaAllah.</p>` : ""}
       ${saved ? `<p class="muted small">${saved.attempt_no === 1 ? "This is your leaderboard score." : `Replay #${saved.attempt_no}. The leaderboard keeps your first score.`}</p>` : ""}
       ${saveErr ? `<p class="error">Couldn't save this run: ${esc(saveErr)}</p>` : ""}
@@ -162,7 +168,7 @@ async function finish() {
   $("#again").onclick = () => start();
   $("#share").onclick = async () => {
     const line = S.results.map((r) => ({ noor: "🌟", hidden_gem: "💎", scholar: "📜", pathfinder: "🧭", traveler: "🐪", footstep: "👣", lost: "⬜" }[r.rank])).join("");
-    const t = `Rihla · ${S.game.title}\nI reached ${stop.name} with ${S.score} pts\n${line}\n${location.href.split("?")[0]}`;
+    const t = `Rihla · ${S.game.title}\nI traveled ${fmtKm(S.score)} and reached ${stop.name}\n${line}\n${location.href.split("?")[0]}`;
     try { await navigator.clipboard.writeText(t); $("#share").textContent = "Copied!"; } catch { $("#share").textContent = "Copy failed"; }
   };
 }
@@ -190,8 +196,8 @@ async function leaderboardView() {
     <p class="eyebrow">${esc(S.game.title)}</p>
     <h1>Leaderboard</h1>
     <p class="muted small">Ranked by each traveler's first run. Replays are counted but don't change the score.</p>
-    ${rows.length ? `<table class="board"><thead><tr><th>#</th><th>Traveler</th><th>Score</th><th>Reached</th><th>Plays</th></tr></thead><tbody>
-      ${rows.map((r, k) => `<tr><td>${k + 1}</td><td>${esc(r.display_name)}</td><td>${r.score}</td><td class="muted">${esc(stopFor(r.score, maxScore(), false).name)}</td><td>${r.attempts}</td></tr>`).join("")}
+    ${rows.length ? `<table class="board"><thead><tr><th>#</th><th>Traveler</th><th>Score</th><th>Distance</th><th>Reached</th><th>Plays</th></tr></thead><tbody>
+      ${rows.map((r, k) => `<tr><td>${k + 1}</td><td>${esc(r.display_name)}</td><td>${r.score}</td><td>${fmtKm(r.score)}</td><td class="muted">${esc(stopFor(r.score, maxScore(), false).name)}</td><td>${r.attempts}</td></tr>`).join("")}
     </tbody></table>` : `<p>No one has finished this journey yet. Be the first.</p>`}
     <div class="row"><button class="primary" id="back">Back</button></div>`;
   $("#back").onclick = () => home();
@@ -213,7 +219,8 @@ function accountView() {
 // ---------------- boot ----------------
 (async function boot() {
   if (DEMO) $("#demo-banner").classList.remove("hidden");
-  drawTrack();
+  drawMascot($("#mascot"));
+  scene.start();
   try { S.user = await api.getUser(); } catch { S.user = null; }
   refreshNav();
   home();

@@ -6,12 +6,12 @@
   <title>Rihla</title>
   <meta name="description" content="Rihla: the GT MSA trivia journey. Rarer answers take you farther." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="./">Rihla <span class="brand-sub">by GT MSA</span></a>
+    <a class="brand" href="./"><canvas id="mascot" class="mascot" aria-hidden="true"></canvas>Rihla <span class="brand-sub">by GT MSA</span></a>
     <nav>
       <button class="link" id="nav-board">Leaderboard</button>
       <a class="link hidden" id="nav-admin" href="admin.html">Dashboard</a>
@@ -21,9 +21,11 @@
 
   <div id="demo-banner" class="banner hidden">Demo mode: sample questions, saved only in this browser, no AI judging.</div>
 
-  <section class="journey" aria-label="Journey">
-    <div class="track" id="track"><div class="track-line"></div><div class="track-fill" id="track-fill"></div><div class="traveler" id="traveler" aria-hidden="true"></div></div>
-    <div class="journey-caption" id="journey-caption"></div>
+  <section class="scene-wrap" aria-label="Your journey">
+    <canvas id="scene" aria-hidden="true"></canvas>
+    <div class="hud"><span class="hud-km" id="hud-km">0 km</span><span class="hud-zone" id="hud-zone"></span></div>
+    <div class="arrive" id="arrive" role="status" aria-live="polite"></div>
+    <div class="hud-next" id="hud-next"></div>
   </section>
 
   <main id="app" class="card"></main>

@@ -27,44 +27,6 @@ export function stopFor(score, max, special) {
   return cur;
 }
 
-// Draw the horizontal route once; stops evenly spaced so labels stay readable.
-export function drawTrack() {
-  const track = $("#track");
-  track.querySelectorAll(".stop").forEach((n) => n.remove());
-  ROUTE.forEach((s, i) => {
-    const x = (i / (ROUTE.length - 1)) * 100;
-    const el = document.createElement("div");
-    el.className = "stop" + (s.special ? " special" : "") + (i % 2 ? " below" : " above");
-    el.style.left = x + "%";
-    el.dataset.i = i;
-    el.innerHTML = `<span class="dot"></span><span class="label"><b>${esc(s.name)}</b>${s.place ? `<small>${esc(s.place)}</small>` : ""}</span>`;
-    track.appendChild(el);
-  });
-  moveTraveler(0, 1, false);
-}
-
-// Position the traveler between stops according to score.
-export function moveTraveler(score, max, special) {
-  const regular = ROUTE.filter((s) => !s.special);
-  const idxOf = (s) => ROUTE.indexOf(s);
-  const xOf = (i) => (i / (ROUTE.length - 1)) * 100;
-  let x;
-  if (special) x = xOf(ROUTE.findIndex((s) => s.special));
-  else {
-    const frac = max ? score / max : 0;
-    let i = 0;
-    while (i < regular.length - 1 && frac >= regular[i + 1].at) i++;
-    const a = regular[i], b = regular[i + 1];
-    const t = b ? Math.min(1, (frac - a.at) / (b.at - a.at)) * 0.6 : 0; // creep toward next stop
-    x = xOf(idxOf(a)) + (b ? (xOf(idxOf(b)) - xOf(idxOf(a))) * t : 0);
-  }
-  $("#traveler").style.left = x + "%";
-  $("#track-fill").style.width = x + "%";
-  const reached = stopFor(score, max, special);
-  document.querySelectorAll(".stop").forEach((n) => n.classList.toggle("reached", Number(n.dataset.i) <= ROUTE.indexOf(reached) && (!ROUTE[n.dataset.i].special || special)));
-  $("#journey-caption").innerHTML = `Now at <b>${esc(reached.name)}</b>${reached.place && !reached.special ? `, ${esc(reached.place)}` : ""}`;
-}
-
 // ---------- sign in / sign up ----------
 export function setupAuth(onChange) {
   const dlg = $("#auth-dialog"), form = $("#auth-form");

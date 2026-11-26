@@ -5,7 +5,7 @@ const SYSTEM = `You help the Georgia Tech Muslim Student Association write quest
 Given a question, list every correct answer you can (aim for 20 to 80 when the answer space allows; fewer if the set is small and fixed).
 For each, give the common spelling, other spellings/transliterations/nicknames players might type, and how rare it is among college students:
 "footstep" (what most people say first), "traveler" (fairly common), "pathfinder" (uncommon), "scholar" (rare), "hidden_gem" (very few would think of it).
-Also add 5 to 10 plausible WRONG answers people might guess, with rank "lost"; these appear in autocomplete so it doesn't give away the right ones.
+Also add 5 to 10 plausible WRONG answers people might guess, with rank "lost", so they are recognized instantly.
 Never use rank "noor"; the officer picks that from the newsletter. Only include answers you are confident are correct.
 If the question is about a specific MSA event you can't know, list only what you can verify and keep the list short.`;
 

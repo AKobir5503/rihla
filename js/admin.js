@@ -124,7 +124,7 @@ function qCard(q, qi) {
     </tbody></table>
     <div class="row"><button class="a-add">+ Answer</button><button class="a-paste">Paste a list</button><button class="a-ai">Suggest answers with AI</button></div>
     <div class="paste-box hidden"><label>One answer per line. Optional: <code>answer | rank | spelling1, spelling2</code> (ranks: ${RANK_ORDER.join(", ")})<textarea class="paste-text" rows="6"></textarea></label><button class="primary paste-go">Add these answers</button></div>
-    <p class="small muted">"Lost" rows are known wrong answers: they still show in autocomplete so the list doesn't give away which answers are right.</p>
+    <p class="small muted">"Lost" rows are known wrong answers, so common wrong guesses are recognized instantly without asking the AI.</p>
   </div>`;
 }
 

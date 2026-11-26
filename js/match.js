@@ -39,37 +39,33 @@ function forms(answer) {
 }
 
 // Returns { answer, exact } or null. `answers` = the question's bank.
+// Silent autocorrect: snaps what was typed to the closest answer when it's clearly that one.
 export function matchAnswer(input, answers) {
   const n = normalize(input);
   if (!n) return null;
   for (const a of answers) if (forms(a).includes(n)) return { answer: a, exact: true };
 
-  // Typos: allow ~1 edit per 5 characters (max 3). Must be a clear single winner.
-  const max = Math.min(3, Math.floor(n.length / 5));
-  if (max === 0) return null;
-  let best = null, bestD = max + 1, tie = false;
-  for (const a of answers) {
-    for (const f of forms(a)) {
-      const d = editDistance(n, f, max);
-      if (d < bestD) { best = a; bestD = d; tie = false; }
-      else if (d === bestD && best && best !== a) tie = true;
-    }
-  }
-  return best && bestD <= max && !tie ? { answer: best, exact: false } : null;
-}
+  const unique = (pred) => {
+    const hits = answers.filter((a) => forms(a).some(pred));
+    return hits.length === 1 ? { answer: hits[0], exact: false } : null;
+  };
 
-// Autocomplete: entries whose words start with what was typed. Alphabetical so the
-// list never hints at rank. Shown after 2 characters.
-export function suggest(input, answers, limit = 6) {
-  const q = (input || "").trim().toLowerCase();
-  if (q.length < 2) return [];
-  const nq = normalize(q);
-  const hits = answers.filter((a) => {
-    const names = [a.text, ...(a.aliases || [])];
-    return names.some((t) => {
-      const low = t.toLowerCase();
-      return low.startsWith(q) || low.split(/[\s\-]+/).some((w) => w.startsWith(q)) || (nq.length >= 3 && normalize(t).includes(nq));
-    });
-  });
-  return hits.map((a) => a.text).sort((x, y) => x.localeCompare(y)).slice(0, limit);
+  // 1) Typos: ~1 edit per 4 characters (max 3), single clear winner.
+  const max = Math.min(3, Math.floor(n.length / 4));
+  if (max > 0) {
+    let best = null, bestD = max + 1, tie = false;
+    for (const a of answers) {
+      for (const f of forms(a)) {
+        const d = editDistance(n, f, max);
+        if (d < bestD) { best = a; bestD = d; tie = false; }
+        else if (d === bestD && best && best !== a) tie = true;
+      }
+    }
+    if (best && bestD <= max && !tie) return { answer: best, exact: false };
+  }
+  // 2) Started typing a longer name ("kende" -> Kendeda Building).
+  if (n.length >= 4) { const m = unique((f) => f.startsWith(n)); if (m) return m; }
+  // 3) Typed a distinctive part of it ("waqqas" -> Sa'd ibn Abi Waqqas).
+  if (n.length >= 5) { const m = unique((f) => f.includes(n)); if (m) return m; }
+  return null;
 }
