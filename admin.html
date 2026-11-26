@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rihla Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./">Rihla <span class="brand-sub">Dashboard</span></a>
+    <nav><a class="link" href="./">Play</a><button class="link" id="nav-account">Sign in</button></nav>
+  </header>
+  <div id="demo-banner" class="banner hidden">Demo mode: games you make here are saved only in this browser.</div>
+  <main id="admin" class="card admin"></main>
+
+  <dialog id="auth-dialog">
+    <form id="auth-form" method="dialog">
+      <h2 id="auth-title">Sign in</h2>
+      <p class="muted" id="auth-hint">Use the account an admin gave dashboard access.</p>
+      <label>Email <input name="email" type="email" required /></label>
+      <label>Password <input name="password" type="password" required minlength="6" /></label>
+      <label id="name-row" class="hidden">Display name <input name="name" maxlength="30" /></label>
+      <p class="error" id="auth-error"></p>
+      <div class="row"><button type="submit" class="primary" id="auth-submit">Sign in</button><button type="button" class="link" id="auth-toggle">Create an account</button></div>
+      <button type="button" class="close" id="auth-close" aria-label="Close">×</button>
+    </form>
+  </dialog>
+  <!-- the journey track isn't shown here, but ui.js expects these to exist -->
+  <div class="hidden"><div id="track"></div><div id="track-fill"></div><div id="traveler"></div><div id="journey-caption"></div></div>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

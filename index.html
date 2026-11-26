@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rihla</title>
+  <meta name="description" content="Rihla: the GT MSA trivia journey. Rarer answers take you farther." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./">Rihla <span class="brand-sub">by GT MSA</span></a>
+    <nav>
+      <button class="link" id="nav-board">Leaderboard</button>
+      <a class="link hidden" id="nav-admin" href="admin.html">Dashboard</a>
+      <button class="link" id="nav-account">Sign in</button>
+    </nav>
+  </header>
+
+  <div id="demo-banner" class="banner hidden">Demo mode: sample questions, saved only in this browser, no AI judging.</div>
+
+  <section class="journey" aria-label="Journey">
+    <div class="track" id="track"><div class="track-line"></div><div class="track-fill" id="track-fill"></div><div class="traveler" id="traveler" aria-hidden="true"></div></div>
+    <div class="journey-caption" id="journey-caption"></div>
+  </section>
+
+  <main id="app" class="card"></main>
+
+  <dialog id="auth-dialog">
+    <form id="auth-form" method="dialog">
+      <h2 id="auth-title">Sign in to play</h2>
+      <p class="muted" id="auth-hint">Any email works. Your name shows on the leaderboard.</p>
+      <label>Email <input name="email" type="email" required autocomplete="email" /></label>
+      <label>Password <input name="password" type="password" required minlength="6" autocomplete="current-password" /></label>
+      <label id="name-row" class="hidden">Display name <input name="name" maxlength="30" autocomplete="nickname" /></label>
+      <p class="error" id="auth-error"></p>
+      <div class="row">
+        <button type="submit" class="primary" id="auth-submit">Sign in</button>
+        <button type="button" class="link" id="auth-toggle">New here? Create an account</button>
+      </div>
+      <button type="button" class="close" id="auth-close" aria-label="Close">×</button>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/game.js"></script>
+</body>
+</html>
