@@ -52,7 +52,7 @@ async function home() {
   app.innerHTML = `
     <p class="eyebrow">${esc(S.game.title)}</p>
     <h1>Rarer answers take you farther.</h1>
-    <p>${S.game.questions.length} questions, ${esc(S.game.timer_seconds || DEFAULT_TIMER_SECONDS)} seconds each. Every point is ${KM_PER_POINT} km of travel: common answers move your camel a few steps, rare ones carry it across oceans. Answer every question with a Hidden Gem or better and the final gate opens. The <b>Noor</b> answer to each question is hiding in the latest GT MSA newsletter.</p>
+    <p>${S.game.questions.length} questions, ${esc(S.game.timer_seconds || DEFAULT_TIMER_SECONDS)} seconds each. Every point is ${KM_PER_POINT} km of travel: common answers move your camel a few steps, rare ones carry it across oceans. Wrong guesses cost nothing: keep typing until you land a valid answer or the timer runs out. Answer every question with a Hidden Gem or better and the final gate opens. The <b>Noor</b> answer to each question is hiding in the latest GT MSA newsletter.</p>
     <ul class="ranks">${RANK_ORDER.map((r) => `<li>${rankChip(r)} <span class="muted">${RANKS[r].points} pts · ${esc(RANKS[r].blurb)}</span></li>`).join("")}</ul>
     ${first ? `<p class="note">Your first run scored <b>${first.score}</b>. That's the score on the leaderboard. You've played ${past.length} time${past.length > 1 ? "s" : ""}; replays are just for fun.</p>` : ""}
     <div class="row"><button class="primary big" id="start">${first ? "Play again" : "Start the journey"}</button></div>`;
@@ -69,6 +69,7 @@ function start() {
 function ask() {
   const q = S.game.questions[S.i];
   const secs = Number(S.game.timer_seconds) || DEFAULT_TIMER_SECONDS;
+  S.tries = []; S.timeUp = false;
   app.innerHTML = `
     <div class="qhead"><span class="eyebrow">Question ${S.i + 1} of ${S.game.questions.length}</span><span class="score">${S.score} pts</span></div>
     <div class="timer"><div class="timer-fill" id="timer-fill"></div></div>
@@ -79,6 +80,7 @@ function ask() {
       </div>
       <button class="primary" id="submit">Submit</button>
     </form>
+    <p class="tries" id="tries" aria-live="polite"></p>
     <p class="muted small" id="time-left">${secs}s</p>`;
   const input = $("#answer");
   $("#answer-form").onsubmit = (e) => { e.preventDefault(); submit(input.value); };
@@ -102,26 +104,37 @@ function startTimer(secs, onEnd) {
 }
 function stopTimer() { if (S.timer) clearInterval(S.timer); S.timer = null; }
 
+// Wrong guesses don't cost anything: the player keeps typing until a valid answer
+// lands or the timer runs out (then it's Lost, 0 points).
 async function submit(raw, timedOut = false) {
-  if (S.busy) return;
-  S.busy = true; stopTimer();
+  if (timedOut) S.timeUp = true;
+  if (S.busy) return; // a check is running; it will see timeUp when it finishes
   const q = S.game.questions[S.i];
   const text = (raw || "").trim();
+  if (!text && !S.timeUp) return;
+  if (text && S.tries.some((t) => t.toLowerCase() === text.toLowerCase()) && !S.timeUp) return wrong(text, true);
+  S.busy = true;
   let rank = "lost", matched = null;
   if (text) {
     const m = matchAnswer(text, q.answers);
     if (m) { rank = m.answer.rank; matched = m.answer; }
     else if (!DEMO) {
-      $("#submit").disabled = true; $("#submit").textContent = "Checking…";
+      const btn = $("#submit"); if (btn) { btn.disabled = true; btn.textContent = "Checking…"; }
       const j = await api.judge(q, text);
       rank = j.rank || "lost"; matched = j.answer || null;
       if (matched && !q.answers.some((a) => a.id === matched.id)) q.answers.push(matched); // remember for reveal + next time
+      if (btn) { btn.disabled = false; btn.textContent = "Submit"; }
     }
   }
+  S.busy = false;
+  if (rank === "lost" && !S.timeUp) return wrong(text);
+  if (rank === "lost" && S.timeUp && S.results.length > S.i) return; // already finalized
+  stopTimer();
   const pts = RANKS[rank]?.points ?? 0;
   S.score += pts;
-  S.results.push({ question_id: q.id, input: text, matched: matched ? matched.text : null, rank, points: pts, timed_out: timedOut && !text });
-  flash(rank, pts, text, matched, timedOut);
+  S.results.push({ question_id: q.id, input: rank === "lost" ? "" : text, matched: matched ? matched.text : null, rank, points: pts, tries: S.tries.slice(), timed_out: rank === "lost" });
+  S.busy = true;
+  flash(rank, pts, rank === "lost" ? "" : text, matched, rank === "lost");
   const nextBtn = $("#next");
   nextBtn.disabled = true;
   const last = S.i === S.game.questions.length - 1;
@@ -133,13 +146,21 @@ async function submit(raw, timedOut = false) {
   S.busy = false;
 }
 
+function wrong(text, repeat = false) {
+  if (!repeat) S.tries.push(text);
+  scene.shake();
+  const input = $("#answer"), box = $("#tries");
+  if (input) { input.value = ""; input.classList.remove("nope"); void input.offsetWidth; input.classList.add("nope"); input.focus(); }
+  if (box) box.innerHTML = `<span class="nope-msg">${repeat ? "Already tried that." : "Not a valid answer. Keep going!"}</span> ${S.tries.map((t) => `<s>${esc(t)}</s>`).join(" ")}`;
+}
+
 function flash(rank, pts, text, matched, timedOut) {
   const last = S.i === S.game.questions.length - 1;
   app.innerHTML = `
     <div class="flash rank-${rank}">
       <div class="flash-rank">${esc(RANKS[rank].label)}</div>
       <div class="flash-pts">+${pts}<small> pts · ${fmtKm(pts)}</small></div>
-      <p class="muted">${!text ? (timedOut ? "Time's up." : "No answer.") : matched && matched.text.toLowerCase() !== text.toLowerCase() ? `Counted as <b>${esc(matched.text)}</b>` : `“${esc(text)}”`}</p>
+      <p class="muted">${!text ? (timedOut ? "Time's up. No valid answer this time." : "No answer.") : matched && matched.text.toLowerCase() !== text.toLowerCase() ? `Counted as <b>${esc(matched.text)}</b>` : `“${esc(text)}”`}</p>
       <button class="primary" id="next">${last ? "See where you landed" : "Next question"}</button>
     </div>`;
   const go = () => { S.i++; last ? finish() : ask(); };

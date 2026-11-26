@@ -20,7 +20,7 @@ export const RANKS = {
   pathfinder: { label: "Pathfinder", points: 35,  blurb: "Uncommon" },
   traveler:   { label: "Traveler",   points: 20,  blurb: "Fairly common" },
   footstep:   { label: "Footstep",   points: 10,  blurb: "What most people say" },
-  lost:       { label: "Lost",       points: 0,   blurb: "Not a valid answer" },
+  lost:       { label: "Lost",       points: 0,   blurb: "Time ran out before a valid answer" },
 };
 export const RANK_ORDER = ["noor", "hidden_gem", "scholar", "pathfinder", "traveler", "footstep", "lost"];
 

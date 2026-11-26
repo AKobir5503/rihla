@@ -4,8 +4,17 @@
 import { KM_PER_POINT } from "./config.js";
 import { ROUTE } from "./ui.js";
 
-let W = 384; // narrower on phones so everything draws bigger
-const H = 112, GROUND = 90, CAMEL_X = 96;
+// Canvas size in "game pixels". The scene fills the whole window, so these are set
+// from the window size: about 5 screen pixels per game pixel.
+let W = 384, H = 180, GROUND = 90, CAMEL_X = 96;
+function fit(canvas) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  H = Math.max(120, Math.min(230, Math.round(vh / 4.6)));
+  W = Math.round(H * vw / vh);
+  GROUND = Math.round(H * 0.5);
+  CAMEL_X = Math.round(Math.min(W * 0.32, 140));
+  canvas.width = W; canvas.height = H;
+}
 const SCREENS = 7; // how many screen-widths the whole journey spans
 
 // ---------- palettes per zone ----------
@@ -122,11 +131,12 @@ function gate(ctx, x, g, open) {
 // ---------- the scene ----------
 export function createScene(canvas, hud) {
   const ctx = canvas.getContext("2d");
-  W = window.innerWidth < 600 ? 224 : 384;
-  canvas.width = W; canvas.height = H; canvas.style.aspectRatio = `${W} / ${H}`;
+  fit(canvas);
+  window.addEventListener("resize", () => { fit(canvas); ctx.imageSmoothingEnabled = false; });
   ctx.imageSmoothingEnabled = false;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  let shakeUntil = 0;
   let maxScore = 500, pxPerKm = 1, km = 0, odo = 0, special = false, walking = false, raf = 0, last = 0, dust = [], stepPx = 0;
   const regular = ROUTE.filter((s) => !s.special);
   const sp = ROUTE.find((s) => s.special);
@@ -151,14 +161,14 @@ export function createScene(canvas, hud) {
     const z = zoneAt(km + 40 / pxPerKm);
     // sky in bands for a pixel look
     for (let i = 0; i < 8; i++) rect(ctx, mix(z.sky[0], z.sky[1], i / 7), 0, i * (GROUND / 8), W, Math.ceil(GROUND / 8));
-    if (z.stars) { for (let i = 0; i < 40; i++) { const sx = (i * 97 - camX * 0.05) % W, sy = (i * 53) % 50; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time / 500 + i); rect(ctx, "#fff7d6", (sx + W) % W, sy + 4, 1, 1); } ctx.globalAlpha = 1; disc(ctx, "#fff3c4", W - 60, 20, 6); disc(ctx, z.sky[0], W - 57, 18, 6); }
-    else disc(ctx, "#fff4c2", W - 64, 26, 7);
+    if (z.stars) { for (let i = 0; i < 90; i++) { const sx = (i * 97 - camX * 0.05) % W, sy = (i * 53) % Math.round(GROUND * 0.7); ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time / 500 + i); rect(ctx, "#fff7d6", (sx + W) % W, sy + 4, 1, 1); } ctx.globalAlpha = 1; disc(ctx, "#fff3c4", W - 60, Math.round(GROUND * 0.25), 6); disc(ctx, z.sky[0], W - 57, Math.round(GROUND * 0.25) - 2, 6); }
+    else disc(ctx, "#fff4c2", W - 64, Math.round(GROUND * 0.3), 7);
     // far + mid parallax layers
     for (let x = 0; x < W; x++) {
       const wx = x + camX;
-      const far = z.skyline ? 38 + (Math.floor((wx * 0.3) / 9) * 37 % 23) : 50 + noise(wx * 0.3) * 10;
+      const far = z.skyline ? GROUND - 52 + (Math.floor((wx * 0.3) / 9) * 37 % 23) : GROUND - 40 + noise(wx * 0.3) * 10;
       rect(ctx, z.far, x, GROUND - (GROUND - far), 1, GROUND - far);
-      const mid = z.dunes ? 72 + Math.sin(wx * 0.6 * 0.03) * 6 : 72 + noise(wx * 0.6 + 300) * 5;
+      const mid = z.dunes ? GROUND - 18 + Math.sin(wx * 0.6 * 0.03) * 6 : GROUND - 18 + noise(wx * 0.6 + 300) * 5;
       rect(ctx, z.mid, x, mid, 1, GROUND - mid);
     }
     // landmarks
@@ -170,9 +180,9 @@ export function createScene(canvas, hud) {
     // ground
     rect(ctx, z.ground, 0, GROUND, W, H - GROUND);
     if (z.water) {
-      for (let x = 0; x < W; x += 1) { const y = GROUND + 2 + Math.round(Math.sin((x + camX) * 0.15 + time / 300) * 1.2); rect(ctx, z.ground2, x, y + 6, 1, 1); if ((x + Math.floor(camX)) % 23 < 4) rect(ctx, z.path, x, y, 1, 1); }
+      for (let row = 0; GROUND + 2 + row * 7 < H; row++) for (let x = 0; x < W; x += 1) { const y = GROUND + 2 + row * 7 + Math.round(Math.sin((x + camX * (1 - row * 0.04)) * 0.15 + time / 300 + row) * 1.2); if ((x + Math.floor(camX) + row * 11) % 23 < 4) rect(ctx, row ? z.ground2 : z.path, x, y, 1, 1); }
     } else {
-      for (let x = 0; x < W; x++) { if (((x + Math.floor(camX)) % 17) < 2) rect(ctx, z.ground2, x, GROUND + 9, 1, 1); if (((x + Math.floor(camX * 1)) % 31) < 1) rect(ctx, z.ground2, x, GROUND + 15, 2, 1); }
+      for (let row = 0; GROUND + 9 + row * 6 < H; row++) for (let x = 0; x < W; x++) if (((x + Math.floor(camX) + row * 13) % (17 + row % 3 * 7)) < 1 + (row % 2)) rect(ctx, z.ground2, x, GROUND + 9 + row * 6, 1, 1);
       rect(ctx, z.path, 0, GROUND + 2, W, 3);
     }
     // dust / splash
@@ -183,7 +193,8 @@ export function createScene(canvas, hud) {
     const frame = walking && Math.floor(stepPx / 6) % 2 ? CAMEL_B : CAMEL_A;
     const bob = z.water ? Math.round(Math.sin(time / 250)) : 0;
     if (z.water) { rect(ctx, "#8a5a2e", CAMEL_X - 6, GROUND - 1 + bob, 30, 3); rect(ctx, "#6d4522", CAMEL_X - 6, GROUND + 2 + bob, 30, 1); rect(ctx, "#6d4522", CAMEL_X + 4, GROUND - 26 + bob, 1, 25); rect(ctx, "#f2efe6", CAMEL_X + 5, GROUND - 25 + bob, 9, 10); }
-    sprite(ctx, frame, CAMEL_X - 8, GROUND - 16 + (z.water ? -1 + bob : 0) + (walking && frame === CAMEL_B ? -1 : 0), PAL);
+    const shook = time < shakeUntil ? Math.round(Math.sin(time / 25) * 2) : 0;
+    sprite(ctx, frame, CAMEL_X - 8 + shook, GROUND - 16 + (z.water ? -1 + bob : 0) + (walking && frame === CAMEL_B ? -1 : 0), PAL);
     // night glow near the end
     if (z.glow && special) { ctx.globalAlpha = 0.12; rect(ctx, "#ffe08a", 0, 0, W, H); ctx.globalAlpha = 1; }
     // HUD
@@ -202,6 +213,8 @@ export function createScene(canvas, hud) {
 
   return {
     setMax(m) { maxScore = Math.max(1, m); pxPerKm = (384 * SCREENS) / (maxScore * KM_PER_POINT); },
+    // a little hop + red flash for a wrong guess
+    shake() { shakeUntil = performance.now() + 350; },
     reset() { km = 0; odo = 0; special = false; dust = []; },
     start() { if (!raf) raf = requestAnimationFrame(loop); },
     stop() { cancelAnimationFrame(raf); raf = 0; },
