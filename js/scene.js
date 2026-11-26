@@ -1,4 +1,4 @@
-// The travel scene: a pixel-art camel crossing a side-scrolling world.
+// The travel scene: a pixel-art traveler crossing a side-scrolling world.
 // Every point = KM_PER_POINT km. Scenery changes by zone; each stop has a landmark.
 // Drawn on a small canvas (W x H) and scaled up with crisp pixels.
 import { KM_PER_POINT } from "./config.js";
@@ -6,13 +6,13 @@ import { ROUTE } from "./ui.js";
 
 // Canvas size in "game pixels". The scene fills the whole window, so these are set
 // from the window size: about 5 screen pixels per game pixel.
-let W = 384, H = 180, GROUND = 90, CAMEL_X = 96;
+let W = 384, H = 180, GROUND = 90, HERO_X = 96;
 function fit(canvas) {
   const vw = window.innerWidth, vh = window.innerHeight;
   H = Math.max(120, Math.min(230, Math.round(vh / 4.6)));
   W = Math.round(H * vw / vh);
-  GROUND = Math.round(H * 0.5);
-  CAMEL_X = Math.round(Math.min(W * 0.32, 140));
+  GROUND = Math.round(H * 0.6);
+  HERO_X = Math.round(Math.min(W * 0.32, 140));
   canvas.width = W; canvas.height = H;
 }
 const SCREENS = 7; // how many screen-widths the whole journey spans
@@ -30,32 +30,40 @@ const ZONES = {
 };
 
 // ---------- pixel sprites ----------
-// Camel, facing right. Two walking frames. Legend in PAL.
-const CAMEL_A = [
-  "..............dd.",
-  ".............dbbd",
-  ".............bbeb",
-  ".............bbbb",
-  "............bbb..",
-  ".....bbb...bbb...",
-  "....bbbbb.bbb....",
-  "..sssssssbbbb....",
-  ".bwwwwwwwbbbb....",
-  "dbbbbbbbbbbbb....",
-  ".bbbbbbbbbbbb....",
-  "..bbbbbbbbbb.....",
-  "..bb.b....bb.b...",
-  "..b..b....b..b...",
-  "..b..b....b..b...",
-  "..dd.dd...dd.dd..",
+// The traveler: an original yellow jacket in a white thobe and kufi, with a satchel. Facing right.
+const HERO_A = [
+  "...........k...k..",
+  "............k.k...",
+  "..........ccccc...",
+  ".........ccccccc..",
+  ".........kkkkkkk..",
+  ".........yyyyyyy..",
+  ".........yyyeeky..",
+  ".........yyyeeky..",
+  ".........yyyyyyyy.",
+  "..........yyyyk...",
+  "..........tttt....",
+  ".........tsttt....",
+  "........ttstttt...",
+  "..kyyky.tttsttty..",
+  ".kyykyktttttsttyy.",
+  ".kyykykttttbbbt...",
+  "..kykyk.tttbbbt...",
+  "...kk...tttttttt..",
+  "........tttttttt..",
+  "........uuuuuuuu..",
+  ".........k....k...",
+  "........kk...kk...",
 ];
-const CAMEL_B = CAMEL_A.slice(0, 12).concat([
-  "...bb.b..bb.b....",
-  "...b..b...b.b....",
-  "..b...b..b...b...",
-  ".dd...dd.dd..dd..",
+const HERO_B = HERO_A.slice(0, 20).concat([
+  "..........k..k....",
+  ".........kk.kk....",
 ]);
-const PAL = { b: "#a8692f", d: "#5e3818", e: "#1c1c1c", s: "#b3263a", w: "#f1d27a" };
+const WING_A = [".ww...", "wwww..", "wwwwww", ".wwwww"];
+const WING_B = ["......", ".www..", "wwwwww", "wwwwww"];
+const HERO_H = HERO_A.length;
+const PAL = { y: "#f2c230", k: "#1d1a16", c: "#ffffff", e: "#ffffff", t: "#f4f1ea", u: "#d6cfbf", s: "#8a5a2e", b: "#a46a34", w: "#cfe9fb" };
+const OUTLINE = Object.fromEntries(Object.keys(PAL).map((k) => [k, "#2a2112"]));
 
 function sprite(ctx, rows, x, y, pal) {
   for (let r = 0; r < rows.length; r++)
@@ -205,28 +213,27 @@ export function createScene(canvas, hud) {
     const end = (sp ? kmOf(sp) : maxScore * KM_PER_POINT) * pxPerKm + 200;
     const nearLand = (x, r) => flatXs.some((l) => Math.abs(x - l) < r);
     props = []; people = [];
-    for (let x = -120, i = 0; x < end; x += 14 + Math.floor(hash(i) * 40), i++) {
+    for (let x = -120, i = 0; x < end; x += 30 + Math.floor(hash(i) * 60), i++) {
       const zone = rawZone(x / pxPerKm); if (zone === "ocean" || nearLand(x, 48)) continue;
-      const list = PROPS[zone] || PROPS.campus, back = hash(i + 9) < 0.6;
-      // only low things (rocks, bushes) go in front of the path so nothing hides the camel
-      props.push({ x, kind: back ? list[Math.floor(hash(i + 50) * list.length)] : (zone === "desert" || zone === "levant" || zone === "hills" ? "rock" : hash(i + 51) < 0.5 ? "bush" : "rock"), back });
+      const list = PROPS[zone] || PROPS.campus;
+      props.push({ x, kind: list[Math.floor(hash(i + 50) * list.length)], back: true });
     }
     const add = (x, i) => { const zone = rawZone(x / pxPerKm); if (zone === "ocean") return;
       const kind = zone === "campus" || zone === "city" ? (hash(i + 3) < 0.55 ? 0 : hash(i + 4) < 0.5 ? 2 : 1) : hash(i + 3) < 0.15 ? 3 : hash(i + 4) < 0.5 ? 2 : 1;
-      people.push({ x, kind, range: 6 + hash(i + 5) * 26, speed: hash(i + 6) < 0.2 ? 0 : 0.006 + hash(i + 7) * 0.012, ph: hash(i + 8) * 100, c1: CLOTH[Math.floor(hash(i + 1) * CLOTH.length)], c2: CLOTH[Math.floor(hash(i + 2) * CLOTH.length)], skin: SKIN[Math.floor(hash(i + 11) * SKIN.length)], back: hash(i + 12) < 0.5 }); };
+      people.push({ x, kind, range: 10 + hash(i + 5) * 30, speed: hash(i + 6) < 0.65 ? 0 : 0.003 + hash(i + 7) * 0.003, ph: hash(i + 8) * 100, c1: CLOTH[Math.floor(hash(i + 1) * CLOTH.length)], c2: CLOTH[Math.floor(hash(i + 2) * CLOTH.length)], skin: SKIN[Math.floor(hash(i + 11) * SKIN.length)], back: hash(i + 12) < 0.5 }); };
     let n = 0;
-    for (let x = 30; x < end; x += 30 + Math.floor(hash(n + 400) * 70)) add(x, n++);
+    for (let x = 60; x < end; x += 90 + Math.floor(hash(n + 400) * 110)) add(x, n++);
     for (const l of flatXs.slice(0, regular.length)) for (let k = 0; k < 3; k++) add(l - 30 + k * 22 + hash(n) * 8, n++);
   }
   // Rolling, bumpy ground: offset (in pixels) of the path at world x. Flat around landmarks.
   function bump(wx) {
-    let h = Math.sin(wx * 0.019) * 3.2 + Math.sin(wx * 0.047 + 1.3) * 1.7 + Math.sin(wx * 0.13 + 2) * 0.6;
+    let h = Math.sin(wx * 0.016) * 2.6 + Math.sin(wx * 0.037 + 1.3) * 1.1;
     for (const l of flatXs) { const d = Math.abs(wx - l); if (d < 75) h *= Math.max(0, (d - 42) / 33); }
     return Math.round(h);
   }
 
   function draw(time) {
-    const camX = km * pxPerKm - CAMEL_X;
+    const camX = km * pxPerKm - HERO_X;
     const z = zoneAt(km + 40 / pxPerKm);
     // sky in bands for a pixel look
     for (let i = 0; i < 8; i++) rect(ctx, mix(z.sky[0], z.sky[1], i / 7), 0, i * (GROUND / 8), W, Math.ceil(GROUND / 8));
@@ -251,11 +258,12 @@ export function createScene(canvas, hud) {
     const toScreen = (wx) => Math.round(wx - camX);
     const groundAt = (sx) => ys[Math.max(0, Math.min(W - 1, Math.round(sx)))];
     // things behind the path: props and people on the far side
-    const drawProps = (back) => { for (const p of props) { if (p.back !== back) continue; const sx = toScreen(p.x); if (sx < -20 || sx > W + 20) continue; tree(ctx, sx, groundAt(sx) + (back ? 0 : 7), p.kind, Math.round(Math.sin(time / 900 + p.x) * 0.6)); } };
-    const drawPeople = (back) => { for (const q of people) { if (q.back !== back) continue;
-      const tri = q.speed ? ((time * q.speed + q.ph) % 2) : 0.5, pos = tri < 1 ? tri : 2 - tri, dir = q.speed ? (tri < 1 ? 1 : -1) : 1;
-      const sx = toScreen(q.x + pos * q.range); if (sx < -8 || sx > W + 8) continue;
-      person(ctx, sx, groundAt(sx) + (back ? 1 : 8), q.kind, q.c1, q.c2, q.skin, q.speed ? Math.floor(time / 220 + q.ph) % 2 : 0, dir); } };
+    const drawProps = (back) => { for (const p of props) { if (p.back !== back || z.water) continue; const sx = toScreen(p.x); if (sx < -20 || sx > W + 20 || Math.abs(sx - HERO_X) < 12) continue; tree(ctx, sx, groundAt(sx) + (back ? 0 : 7), p.kind, Math.round(Math.sin(time / 900 + p.x) * 0.6)); } };
+    const drawPeople = (back) => { for (const q of people) { if (q.back !== back || z.water) continue;
+      // walkers stroll slowly back and forth (speed is game pixels per ms); the rest stand and chat
+      const tri = q.speed ? ((time * q.speed / q.range + q.ph) % 2) : 0.5, pos = tri < 1 ? tri : 2 - tri, dir = q.speed ? (tri < 1 ? 1 : -1) : (hash(q.x) < 0.5 ? 1 : -1);
+      const sx = toScreen(Math.round(q.x + pos * q.range)); if (sx < -8 || sx > W + 8) continue;
+      person(ctx, sx, groundAt(sx) + 1, q.kind, q.c1, q.c2, q.skin, q.speed ? Math.floor(time / 380 + q.ph) % 2 : 0, dir); } };
     drawProps(true);
     // landmarks
     for (const s of regular) { const sx = kmOf(s) * pxPerKm - camX + (s === regular[0] ? -46 : 52); if (sx > -60 && sx < W + 60) LANDMARKS[s.sprite]?.(ctx, sx, GROUND); }
@@ -275,38 +283,35 @@ export function createScene(canvas, hud) {
         const y = GROUND + 14 + row * 5, sp = 1 + row * 0.035;
         for (let x = 0; x < W; x++) {
           const wx = Math.floor(x + camX * sp) * 3 + row * 1013, r = hash(wx);
-          if (r < 0.035) { rect(ctx, z.ground2, x, y, 3, 1); rect(ctx, z.ground2, x + 1, y - 1, 1, 1); if (r < 0.012) rect(ctx, z.ground2, x - 1, y - 2, 1, 2); }
-          else if (r < 0.042) { if (flowers) { rect(ctx, mix(z.ground2, "#000000", 0.1), x, y, 1, 2); rect(ctx, flowers[Math.floor(hash(wx + 5) * 4)], x, y - 1, 1, 1); } else { rect(ctx, mix(z.ground, "#000000", 0.2), x, y, 2, 1); rect(ctx, mix(z.ground, "#ffffff", 0.2), x, y - 1, 1, 1); } }
-          else if (r > 0.995) rect(ctx, mix(z.ground, "#ffffff", 0.12), x, y, 2, 1);
+          if (r < 0.012) { rect(ctx, z.ground2, x, y, 3, 1); rect(ctx, z.ground2, x + 1, y - 1, 1, 1); if (r < 0.012) rect(ctx, z.ground2, x - 1, y - 2, 1, 2); }
+          else if (r < 0.0145) { if (flowers) { rect(ctx, mix(z.ground2, "#000000", 0.1), x, y, 1, 2); rect(ctx, flowers[Math.floor(hash(wx + 5) * 4)], x, y - 1, 1, 1); } else { rect(ctx, mix(z.ground, "#000000", 0.2), x, y, 2, 1); rect(ctx, mix(z.ground, "#ffffff", 0.2), x, y - 1, 1, 1); } }
+          else if (r > 0.999) rect(ctx, mix(z.ground, "#ffffff", 0.12), x, y, 2, 1);
         }
       }
       const edge = mix(z.path, z.ground, 0.45), pebble = mix(z.path, "#000000", 0.18);
       for (let x = 0; x < W; x++) {
         const wx = Math.floor(x + camX), y = ys[x];
-        rect(ctx, mix(z.ground, "#000000", 0.12), x, y, 1, 1);
+        rect(ctx, edge, x, y + 1, 1, 1);
         rect(ctx, z.path, x, y + 2, 1, 4);
-        if (hash(wx) < 0.35) rect(ctx, edge, x, y + 1, 1, 1);
-        if (hash(wx + 7) < 0.3) rect(ctx, edge, x, y + 6, 1, 1);
-        if (hash(wx + 13) < 0.08) rect(ctx, pebble, x, y + 3 + Math.floor(hash(wx + 3) * 2), 1, 1);
-        if (hash(wx + 21) < 0.12) rect(ctx, mix(z.ground, "#ffffff", 0.18), x, y - 1, 1, 1);
+        rect(ctx, edge, x, y + 6, 1, 1);
+        if (hash(wx + 13) < 0.025) rect(ctx, pebble, x, y + 3 + Math.floor(hash(wx + 3) * 2), 1, 1);
       }
     }
-    // dust / splash
+    // dust
     dust = dust.filter((d) => (d.life -= 1) > 0);
     for (const d of dust) { d.x -= d.vx; d.y -= d.vy; ctx.globalAlpha = d.life / 30; rect(ctx, z.water ? "#e6f6ff" : mix(z.path, "#ffffff", 0.3), d.x, d.y, d.s, d.s); }
     ctx.globalAlpha = 1;
-    // camel (bobbing on a raft at sea), standing on the bumpy path
-    const cg = z.water ? GROUND : groundAt(CAMEL_X) + 3;
-    const frame = walking && Math.floor(stepPx / 6) % 2 ? CAMEL_B : CAMEL_A;
-    const bob = z.water ? Math.round(Math.sin(time / 250)) : 0;
-    if (z.water) { rect(ctx, "#8a5a2e", CAMEL_X - 6, GROUND - 1 + bob, 30, 3); rect(ctx, "#6d4522", CAMEL_X - 6, GROUND + 2 + bob, 30, 1); rect(ctx, "#6d4522", CAMEL_X + 4, GROUND - 26 + bob, 1, 25); rect(ctx, "#f2efe6", CAMEL_X + 5, GROUND - 25 + bob, 9, 10); }
+    // the traveler: walks the path, flies low over the sea
+    const fly = !!z.water, cg = fly ? GROUND - 8 + Math.round(Math.sin(time / 300) * 2) : groundAt(HERO_X) + 3;
+    const stepping = walking && !fly && Math.floor(stepPx / 5) % 2;
+    const frame = stepping ? HERO_B : HERO_A;
     const shook = time < shakeUntil ? Math.round(Math.sin(time / 25) * 2) : 0;
-    // dark outline so the camel stands out on sand
-    const camY = cg - 16 + (z.water ? -1 + bob : 0) + (walking && frame === CAMEL_B ? -1 : 0), OUT = { b: "#3a2412", d: "#3a2412", e: "#3a2412", s: "#3a2412", w: "#3a2412" };
-    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) sprite(ctx, frame, CAMEL_X - 8 + shook + dx, camY + dy, OUT);
-    sprite(ctx, frame, CAMEL_X - 8 + shook, cg - 16 + (z.water ? -1 + bob : 0) + (walking && frame === CAMEL_B ? -1 : 0), PAL);
-    drawProps(false);
-    drawPeople(false);
+    const hx = HERO_X - 9 + shook, hy = cg - HERO_H + (stepping ? -1 : 0);
+    const wing = Math.floor(time / (fly || walking ? 70 : 260)) % 2 ? WING_B : WING_A;
+    if (fly) { ctx.globalAlpha = 0.25; rect(ctx, "#0b2a44", HERO_X - 6, GROUND + 3, 12, 1); ctx.globalAlpha = 1; }
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { sprite(ctx, wing, hx + 1 + dx, hy + 8 + dy, OUTLINE); sprite(ctx, frame, hx + dx, hy + dy, OUTLINE); }
+    ctx.globalAlpha = 0.9; sprite(ctx, wing, hx + 1, hy + 8, PAL); ctx.globalAlpha = 1;
+    sprite(ctx, frame, hx, hy, PAL);
     // night glow near the end
     if (z.glow && special) { ctx.globalAlpha = 0.12; rect(ctx, "#ffe08a", 0, 0, W, H); ctx.globalAlpha = 1; }
     // HUD
@@ -353,7 +358,7 @@ export function createScene(canvas, hud) {
           km = from + dist * ease(p);
           odo = odoFrom + (odoTo - odoFrom) * ease(p);
           stepPx += (km - prev) * pxPerKm;
-          if (Math.random() < 0.5) dust.push({ x: CAMEL_X - 6, y: GROUND + 2 + bump(km * pxPerKm), vx: 0.6 + Math.random(), vy: Math.random() * 0.4, s: 1 + (Math.random() < 0.3), life: 30 });
+          if (!zoneAt(km).water && Math.random() < 0.35) dust.push({ x: HERO_X - 6, y: GROUND + 2 + bump(km * pxPerKm), vx: 0.6 + Math.random(), vy: Math.random() * 0.4, s: 1 + (Math.random() < 0.3), life: 30 });
           for (const s of [...regular, ...(special && sp ? [sp] : [])]) if (!passed.has(s) && kmOf(s) > from && (s.special ? target : kmOf(s)) <= target && km >= (s.special ? target : kmOf(s)) - 0.5) { passed.add(s); onArrive?.(s); }
           if (p < 1) requestAnimationFrame(step); else { walking = false; done(); }
         };
@@ -368,6 +373,7 @@ export function createScene(canvas, hud) {
 // Tiny mascot for the header.
 export function drawMascot(canvas) {
   const ctx = canvas.getContext("2d");
-  canvas.width = 17; canvas.height = 16;
-  sprite(ctx, CAMEL_A, 0, 0, PAL);
+  canvas.width = 20; canvas.height = 24;
+  for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { sprite(ctx, WING_A, 2 + dx, 9 + dy, OUTLINE); sprite(ctx, HERO_A, 1 + dx, 1 + dy, OUTLINE); }
+  sprite(ctx, WING_A, 2, 9, PAL); sprite(ctx, HERO_A, 1, 1, PAL);
 }

@@ -1,6 +1,6 @@
 # Rihla
 
-GT MSA's trivia journey game. Each question has many right answers; rarer answers score more. Every point is 10 km of travel: a pixel-art camel walks (and sails) a side-scrolling world from the GT Reflection Room past Al Farooq, DC, Istanbul, Cairo, Damascus and al-Aqsa, with the scenery changing by region. Answer every question with a Hidden Gem or better and the final gate opens to Madinah & Makkah. The top answer to each question, the **Noor** answer, comes from the MSA newsletter.
+GT MSA's trivia journey game. Each question has many right answers; rarer answers score more. Every point is 10 km of travel: a pixel-art yellow jacket traveler walks (and flies) a side-scrolling world from the GT Reflection Room past Al Farooq, DC, Istanbul, Cairo, Damascus and al-Aqsa, with the scenery changing by region. Answer every question with a Hidden Gem or better and the final gate opens to Madinah & Makkah. The top answer to each question, the **Noor** answer, comes from the MSA newsletter.
 
 - **Play page** (`index.html`): timer per question, silent autocorrect (typos snap to the closest answer), instant ranks, travel animation with arrivals at each landmark, full answer reveal after you finish, replays allowed.
 - **Leaderboard**: each player's *first* score, plus how many times they've played.
@@ -52,7 +52,7 @@ css/style.css             look and feel (light + dark)
 js/config.js              ranks, points, routes, Supabase keys  ← edit this
 js/game.js, js/admin.js   play page and dashboard
 js/match.js               instant typo-tolerant matching (autocorrect)
-js/scene.js               the pixel-art travel scene (camel, zones, landmarks)
+js/scene.js               the pixel-art travel scene (traveler, zones, landmarks)
 js/data.js                demo backend (browser) and live backend (Supabase)
 js/sample.js              sample questions for demo mode
 supabase/schema.sql       tables + security rules

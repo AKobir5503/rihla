@@ -53,7 +53,7 @@ async function home() {
   app.innerHTML = `
     <p class="eyebrow">${esc(S.game.title)}</p>
     <h1>Rarer answers take you farther.</h1>
-    <p>${S.game.questions.length} questions, ${esc(S.game.timer_seconds || DEFAULT_TIMER_SECONDS)} seconds each. Every point is ${KM_PER_POINT} km of travel: common answers move your camel a few steps, rare ones carry it across oceans. Wrong guesses cost nothing: keep typing until you land a valid answer or the timer runs out. Answer every question with a Hidden Gem or better and the final gate opens. The <b>Noor</b> answer to each question is hiding in the latest GT MSA newsletter.</p>
+    <p>${S.game.questions.length} questions, ${esc(S.game.timer_seconds || DEFAULT_TIMER_SECONDS)} seconds each. Every point is ${KM_PER_POINT} km of travel: common answers move your traveler a few steps, rare ones carry it across oceans. Wrong guesses cost nothing: keep typing until you land a valid answer or the timer runs out. Answer every question with a Hidden Gem or better and the final gate opens. The <b>Noor</b> answer to each question is hiding in the latest GT MSA newsletter.</p>
     <ul class="ranks">${RANK_ORDER.map((r) => `<li>${rankChip(r)} <span class="muted">${RANKS[r].points} pts · ${esc(RANKS[r].blurb)}</span></li>`).join("")}</ul>
     ${first ? `<p class="note">Your first run scored <b>${first.score}</b>. That's the score on the leaderboard. You've played ${past.length} time${past.length > 1 ? "s" : ""}; replays are just for fun.</p>` : ""}
     <div class="row"><button class="primary big" id="start">${first ? "Play again" : "Start the journey"}</button></div>`;
@@ -142,7 +142,7 @@ async function submit(raw, timedOut = false) {
   const nextBtn = $("#next");
   nextBtn.disabled = true;
   const last = S.i === S.game.questions.length - 1;
-  // On the last answer of an all-Hidden-Gem run, the camel goes through the gate.
+  // On the last answer of an all-Hidden-Gem run, the traveler goes through the gate.
   const special = last && isSpecialRun(S.results.map((r) => r.rank));
   await scene.travelTo(S.score, special, arrive);
   showNext();
