@@ -397,8 +397,9 @@ export function createScene(canvas, hud) {
       for (let i = 0; i < 9; i++) { const w = 14 + Math.floor(hash(i + 70) * 20), span = W + 80; const cx = ((hash(i + 60) * span - camX * 0.06 + time * 0.003 * (1 + (i % 3))) % span + span) % span - 50; cloud(Math.round(cx), Math.round(8 + hash(i + 80) * GROUND * 0.38), w, 1 - night); }
       ctx.globalAlpha = 1 - night; for (let i = 0; i < 7; i++) { const span = W + 40; const bx = ((hash(i + 90) * span + time * 0.01 * (1 + hash(i + 91)) - camX * 0.2) % span + span) % span - 20; bird(bx, 12 + hash(i + 92) * GROUND * 0.35 + Math.sin(time / 700 + i) * 2, Math.floor(time / 200 + i) % 2, mix(s0, "#1c2433", 0.6)); } ctx.globalAlpha = 1; }
     // far mountains (and pyramids in Egypt)
+    const zms = new Array(W); for (let x = 0; x < W; x++) zms[x] = zoneMix(x + camX, 90);
     for (let x = 0; x < W; x++) {
-      const zm = zoneMix(x + camX, 120), fx = x + camX * 0.25;
+      const zm = zms[x], fx = x + camX * 0.25;
       const top = GROUND - H * 0.2 + noise(fx * 0.6) * H * 0.045;
       R(mix(C("far", zm), s1, 0.25), x, top, 1, GROUND - top);
     }
@@ -410,7 +411,7 @@ export function createScene(canvas, hud) {
     // near hills + ground line
     const ys = new Array(W), sea = new Array(W);
     for (let x = 0; x < W; x++) {
-      const wx = x + camX, zm = zoneMix(wx, 90), depth = seaDepth(wx);
+      const wx = x + camX, zm = zms[x], depth = seaDepth(wx);
       sea[x] = depth;
       ys[x] = depth > 0 ? GROUND + 2 : GROUND + bump(wx);
       const dunes = (zm.A.dunes ? 1 - zm.t : 0) + (zm.B.dunes ? zm.t : 0);
@@ -436,7 +437,7 @@ export function createScene(canvas, hud) {
     }
     // ground, sea, beach and path
     for (let x = 0; x < W; x++) {
-      const wx = x + camX, zm = zoneMix(wx, 90), y = ys[x], depth = sea[x];
+      const wx = x + camX, zm = zms[x], y = ys[x], depth = sea[x];
       if (depth > 0) {
         const wc = "#2f78ad"; R(wc, x, y, 1, H - y);
         const wave = Math.sin(wx * 0.09 + time / 450);
@@ -461,7 +462,7 @@ export function createScene(canvas, hud) {
         if (sea[x] > -2 || (sea[x] > -70 && y >= ys[x] + 5 + -sea[x] * 1.6)) continue;
         const wx = Math.floor(x + camX * spd) * 3 + row * 1013, r = hash(wx);
         if (r > 0.016) continue;
-        const zm = zoneMix(x + camX, 90), g2 = C("ground2", zm), dry = (zm.A.dunes || zm.A.night) && (zm.B.dunes || zm.B.night);
+        const zm = zms[x], g2 = C("ground2", zm), dry = (zm.A.dunes || zm.A.night) && (zm.B.dunes || zm.B.night);
         if (r < 0.01) { R(g2, x, y, 3, 1); R(g2, x + 1, y - 1, 1, 1); if (r < 0.004) R(g2, x - 1, y - 2, 1, 2); }
         else if (!dry) { R(dk(g2, 0.1), x, y, 1, 2); R(pick(["#f2c94c", "#ffffff", "#e889b5", "#b9a3f0"], hash(wx + 5)), x, y - 1, 1, 1); }
         else { R(dk(C("ground", zm), 0.2), x, y, 2, 1); R(lt(C("ground", zm), 0.2), x, y - 1, 1, 1); }
@@ -526,12 +527,12 @@ export function createScene(canvas, hud) {
       if (!special && sp) target = Math.min(target, gateKm() - 34 / pxPerKm); // the gate stays shut
       if (special && sp) target = kmOf(sp) - (lmOf(sp).hw + 16) / pxPerKm; // stop in front of it
       const from = km, dist = target - from, odoFrom = odo, odoTo = score * KM_PER_POINT;
-      if (reduce || dist <= 0.5) {
+      if (dist <= 0.5) {
         for (const s of regular) if (kmOf(s) > from && kmOf(s) <= target) onArrive?.(s);
         if (special && sp && target > from) onArrive?.(sp);
         km = Math.max(km, target); odo = odoTo; return Promise.resolve();
       }
-      const dur = Math.min(5200, 1000 + dist * pxPerKm * 4);
+      const dur = Math.min(5200, 1000 + dist * pxPerKm * 4) * (reduce ? 0.6 : 1);
       const t0 = performance.now(), passed = new Set();
       walking = true;
       return new Promise((done) => {
