@@ -505,7 +505,9 @@ export function createScene(canvas, hud) {
 
   function burst(color, n, x, y) { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = 0.6 + Math.random() * 1.8; sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.2, life: 35 + Math.random() * 30, c: Math.random() < 0.25 ? "#ffffff" : color, s: Math.random() < 0.4 ? 2 : 1 }); } }
 
-  function loop(t) { draw(t); raf = requestAnimationFrame(loop); }
+  // keep animating even if one frame throws, so the map never freezes
+  function loop(t) { raf = requestAnimationFrame(loop); try { draw(t); } catch (e) { console.error(e); } }
+  pxPerKm = WORLD / (maxScore * KM_PER_POINT); build(); // a default world until the game's real max score is known
   function nextStopAfter(k) { return regular.find((s) => kmOf(s) > k + 1) || (special && sp && kmOf(sp) - 60 / pxPerKm > k ? sp : null); }
 
   return {
