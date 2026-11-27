@@ -7,7 +7,7 @@
 // to go live. The anon key is safe to publish; it only allows what the database
 // rules in supabase/schema.sql allow.
 export const SUPABASE_URL = "";
-export const SUPABASE_ANON_KEY = "";
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyaGxqbW14Y253eHJmdXp0ZXp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU3NDU2MjQsImV4cCI6MjExMTMyMTYyNH0.VISYfmWayhX2n4xsyRRSFXsJ8VChZVIaoif-HQ_25Cg";
 
 // Pick which journey players travel: "masjids" or "campus".
 export const ROUTE_NAME = "masjids";
