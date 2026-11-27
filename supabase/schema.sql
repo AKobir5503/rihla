@@ -114,3 +114,13 @@ drop policy if exists "insert own attempt" on public.attempts;
 create policy "insert own attempt" on public.attempts for insert with check (user_id = auth.uid());
 
 grant select on public.leaderboard to anon, authenticated;
+-- ---------- table access (newer Supabase projects don't grant this automatically; row rules above still apply) ----------
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+grant select on public.profiles, public.games, public.questions, public.answers, public.attempts, public.leaderboard to anon, authenticated;
+grant insert, update, delete on public.games, public.questions, public.answers to authenticated;
+grant insert on public.attempts to authenticated;
+grant usage on all sequences in schema public to authenticated;
+grant execute on function public.is_admin() to anon, authenticated;
+
